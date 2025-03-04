@@ -1,25 +1,20 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora de Caudal Hunter</title>
     <!-- Librería PapaParse para parsear CSV en el navegador -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-    <!-- Vincular la hoja de estilo CSS -->
-    <link rel="stylesheet" href="styles.css">
+    <!-- Hoja de estilos -->
+    <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
     <header>
         <h1>Calculadora de Caudal por Unidades de Hunter</h1>
     </header>
-    
+
     <main>
-        <div class="file-upload">
-            <label for="file-input" class="file-label">Cargar CSV:</label>
-            <input type="file" id="file-input" />
-        </div>
-        
         <div class="form-group">
             <label for="unidades-hunter">Introduce el valor de unidades Hunter:</label>
             <input type="number" id="unidades-hunter" step="0.5" min="0.5">
@@ -34,68 +29,77 @@
     </main>
 
     <script>
+        // Arreglos globales para guardar los datos de tanque y fluxómetro
         let dataTanque = [];
         let dataFluxo = [];
 
-        document.getElementById('file-input').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        // Cargamos el CSV automáticamente al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ajusta la ruta si tu CSV está en otra carpeta
+            fetch('./DATOSHUNTER.csv')
+                .then(response => response.text())
+                .then(csvData => {
+                    Papa.parse(csvData, {
+                        complete: function(results) {
+                            const rows = results.data;
 
-            Papa.parse(file, {
-                complete: function(results) {
-                    const rows = results.data;
+                            // Construimos dataTanque y dataFluxo, convirtiendo comas a puntos
+                            dataTanque = rows.map(row => {
+                                return {
+                                    units: parseFloat(row['Unidades Hunter Tanque'].replace(',', '.')),
+                                    caudal: parseFloat(row['Caudal (l/s)'].replace(',', '.'))
+                                };
+                            }).sort((a, b) => a.units - b.units);
 
-                    dataTanque = rows.map(row => {
-                        return {
-                            units: parseFloat(row['Unidades Hunter Tanque'].replace(',', '.')),
-                            caudal: parseFloat(row['Caudal (l/s)'].replace(',', '.'))
-                        };
-                    }).sort((a, b) => a.units - b.units);
+                            dataFluxo = rows.map(row => {
+                                return {
+                                    units: parseFloat(row['Unidades Hunter Fluxometro'].replace(',', '.')),
+                                    caudal: parseFloat(row['Caudal (l/s)'].replace(',', '.'))
+                                };
+                            }).sort((a, b) => a.units - b.units);
 
-                    dataFluxo = rows.map(row => {
-                        return {
-                            units: parseFloat(row['Unidades Hunter Fluxometro'].replace(',', '.')),
-                            caudal: parseFloat(row['Caudal (l/s)'].replace(',', '.'))
-                        };
-                    }).sort((a, b) => a.units - b.units);
-
-                    alert("Datos cargados exitosamente.");
-                },
-                header: true,
-                skipEmptyLines: true,
-                delimiter: ";"
-            });
+                            console.log("CSV cargado y parseado exitosamente.");
+                        },
+                        header: true,
+                        skipEmptyLines: true,
+                        delimiter: ";"
+                    });
+                })
+                .catch(error => {
+                    console.error("Error al cargar el CSV:", error);
+                });
         });
 
+        // Función para interpolar (o devolver) el caudal dado un arreglo y un valor x
         function getCaudalInterpolado(data, x) {
+            // Si x está fuera del rango mínimo, devuelve el caudal mínimo
             if (x <= data[0].units) {
                 return data[0].caudal;
             }
+            // Si x está fuera del rango máximo, devuelve el caudal máximo
             if (x >= data[data.length - 1].units) {
                 return data[data.length - 1].caudal;
             }
             
+            // Busca coincidencia exacta o interpola
             for (let i = 0; i < data.length - 1; i++) {
                 const x1 = data[i].units;
                 const x2 = data[i + 1].units;
                 const y1 = data[i].caudal;
                 const y2 = data[i + 1].caudal;
 
-                if (x === x1) {
-                    return y1;
-                }
-                if (x === x2) {
-                    return y2;
-                }
+                if (x === x1) return y1;
+                if (x === x2) return y2;
 
+                // Si x está entre x1 y x2, hacemos interpolación lineal
                 if (x1 < x && x < x2) {
-                    const y = y1 + (y2 - y1) * ((x - x1) / (x2 - x1));
-                    return y;
+                    return y1 + (y2 - y1) * ((x - x1) / (x2 - x1));
                 }
             }
-            return null;
+            return null; // Por si no se encuentra, aunque no debería suceder con datos bien ordenados
         }
 
+        // Función para calcular y mostrar el caudal
         function calcularCaudal() {
             const unidadesHunter = parseFloat(document.getElementById('unidades-hunter').value);
             const resultadoTanque = document.getElementById('resultado-tanque');
@@ -107,9 +111,11 @@
                 return;
             }
 
+            // Obtenemos el caudal (exacto o interpolado) para tanque y fluxómetro
             const caudalTanque = getCaudalInterpolado(dataTanque, unidadesHunter);
             const caudalFluxo = getCaudalInterpolado(dataFluxo, unidadesHunter);
 
+            // Mostrar resultados
             if (caudalTanque === null) {
                 resultadoTanque.textContent = "No se encontraron datos para Tanque.";
             } else {
