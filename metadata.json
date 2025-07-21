@@ -1,0 +1,5 @@
+{
+  "name": "Calculadora de Caudal Hunter",
+  "description": "Una aplicación web para calcular el caudal de agua (en l/s) basado en las unidades de Hunter, utilizando interpolación lineal para valores intermedios. Proporciona cálculos para sistemas con tanque y con fluxómetro.",
+  "requestFramePermissions": []
+}
