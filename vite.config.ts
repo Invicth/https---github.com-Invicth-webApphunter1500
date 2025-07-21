@@ -13,7 +13,7 @@ export default defineConfig(({ command, mode }) => {
       // --- ESTA ES LA LÍNEA CLAVE ---
       // Si el comando es 'serve' (npm run dev), la base es '/'.
       // Si es 'build' (npm run deploy), la base es el nombre de tu repo.
-      base: command === 'serve' ? '/' : '/calculadora-de-caudal-hunter/',
+      base: command === 'serve' ? '/' : '/webAppHunter/',
       
       // Tu configuración de variables y alias sigue igual
       define: {
